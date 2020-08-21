@@ -53,7 +53,6 @@ class JSHandler:
     @staticmethod
     def encrypt(data: dict):
 
-        data.update(data)
         data_byte = json.dumps(data).encode()
         data_enc = JSHandler.cipher.encrypt(data_byte)
 

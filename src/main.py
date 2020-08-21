@@ -13,7 +13,7 @@ from encrypter import Password
 from gen import DataBase
 
 def get_args():
-    """ return parsed args """
+    """ returns parsed args """
 
     args = ap.ArgumentParser(description="Command line password mananger")
 
@@ -38,8 +38,6 @@ def get_args():
                       help="don't generate a password automatically")
 
     parsed = args.parse_args()
-    #print(parsed)
-    #exit(0)
 
     if parsed.manual_password:
         parsed.manual_password = getpass("new password for {}:"
@@ -107,12 +105,15 @@ def get(provider) -> list:
 
     if len(matches) > 1:
         print(f"{len(matches)} entries found\n")
-        for i, obj in enumerate(matches):
-            print(f"{i + 1} -> {obj} at " + "{}".format(aux[obj][0]))
+        try:
+            for i, obj in enumerate(matches):
+                print(f"{i + 1} -> {obj} at " + "{}".format(aux[obj][0]))
 
-        entry = entry_range(range(len(matches)))
+            entry = entry_range(range(len(matches)))
 
-        return list(aux[matches[entry]])
+            return list(aux[matches[entry]])
+        except KeyError:
+            print("provider not found, was it spelled right?")
 
     return list(aux[provider])
 
@@ -138,16 +139,17 @@ def entry_range(scope: range) -> int:
     """ checks if given range is inside the expected scope """
 
     print()
-    while True:
+    entry = scope[0] - 1
+    while entry not in scope:
         try:
             entry = int(input("Entry: ")) - 1
-            if entry in scope:
-                return entry
         except ValueError:
             print("Insert a number from {} to {}"
                   .format(scope[0] + 1,
                           scope[-1] + 1))
             continue
+
+    return entry
 
 
 if __name__ == "__main__":
