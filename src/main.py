@@ -4,9 +4,9 @@
 from os.path import exists as file_exists
 from getpass import getpass
 from sys import exit as sys_exit
+import argparse as ap
 import re
 
-import argparse as ap
 from pyperclip import copy
 
 from encrypter import Password
