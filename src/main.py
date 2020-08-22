@@ -10,7 +10,7 @@ import argparse as ap
 from pyperclip import copy
 
 from encrypter import Password
-from gen import DataBase
+from login_handler import DataManager
 
 def get_args():
     """ returns parsed args """
@@ -20,8 +20,8 @@ def get_args():
     args.add_argument("--configure", action="store_true",
                       help="sets up password and other tweaks")
 
-    args.add_argument("action", choices=["get", "add", "remove", "list"],
-                      default="list", nargs="?")
+    args.add_argument("action", default="list", nargs="?",
+                      choices=["get", "add", "remove", "list", "import"])
 
     args.add_argument("data", type=str, nargs="*",
                       help="takes two positional arguments in order: provider"
@@ -41,7 +41,7 @@ def get_args():
 
     if parsed.manual_password:
         parsed.manual_password = getpass("new password for {}:"
-                                       .format(parsed.data[0]))
+                                         .format(parsed.data[0]))
 
     return parsed
 
@@ -65,21 +65,28 @@ def main():
 
     if args.action == "get":
         content = get(args.data[0])
-        print("Username:{}\nPassword:{}".format(content[0], content[1]))
     elif args.action == "add":
         content = add(args.data[1],
                       args.data[0],
                       auto_confirm=args.auto_confirm,
                       password=args.manual_password)
-
-    elif args.action == "remove":
-        remove(args.data[0], args.auto_confirm)
-    else:
-        data = DataBase.get_db()
+        sys_exit(0)
+    elif args.action == "list":
+        data = DataManager.get_db()
         for i in data.keys():
             print("{} \tat {}".format(i, data[i][0]))
+        sys_exit(0)
+    elif args.action == "import":
+        parse_csv(args.data[0])
+        sys_exit(0)
+    else: #remove"
+        remove(args.data[0], args.auto_confirm)
+        sys_exit(0)
+
     if args.copy:
         copy(content[1])
+    else:
+        print("Username:{}\nPassword:{}".format(content[0], content[1]))
 
 
 def remove(provider, auto_confirm=False):
@@ -91,37 +98,36 @@ def remove(provider, auto_confirm=False):
             if input(f"delete user {data[0]} at {provider}? [y/*] ") != "y":
                 sys_exit(55)
 
-        DataBase.remove_from_db(provider)
+        DataManager.remove_from_db(provider)
     except KeyError:
         print(f"provider {provider} not found")
 
 
 def get(provider) -> list:
-    """  gets and return a list with user, password in this order """
+    """  decodes and returns a list with user and password in this order """
 
-    aux = DataBase.get_db()
+    data_dict = DataManager.get_db()
 
-    matches = re.findall(f"{provider}-?[0-9]?", str(aux.keys()))
+    matches = re.findall(f"{provider}-?[0-9]?", str(data_dict.keys()))
 
     if len(matches) > 1:
         print(f"{len(matches)} entries found\n")
-        try:
-            for i, obj in enumerate(matches):
-                print(f"{i + 1} -> {obj} at " + "{}".format(aux[obj][0]))
+        for i, obj in enumerate(matches):
+            print(f"{i + 1} -> {obj} at " + "{}".format(data_dict[obj][0]))
 
-            entry = entry_range(range(len(matches)))
+        entry = entry_range(range(len(matches)))
 
-            return list(aux[matches[entry]])
-        except KeyError:
-            print("provider not found, was it spelled right?")
-
-    return list(aux[provider])
+    try:
+        return list(data_dict[provider])
+    except KeyError:
+        print("provider not found, was it spelled right?")
+        sys_exit(1)
 
 
 def add(username, provider, password=None, auto_confirm=False) -> list:
     """ adds a new user with given password to DB """
 
-    new_password = DataBase(username, provider)
+    new_password = DataManager(username, provider)
     if password:
         new_password.pwrd = password
 
@@ -130,9 +136,18 @@ def add(username, provider, password=None, auto_confirm=False) -> list:
     else:
         info = input(f"user {new_password.info[provider][0]}"
                      + f" for provider {provider} created"
-                     + " add to database? [y/*] ")
+                     + " add to library? [y/*] ")
 
     return new_password.write_to_file() if info == "y" else sys_exit(0)
+
+def parse_csv(filepath):
+
+    csv_content = DataManager.import_csv(filepath)
+
+    if file_exists(DataManager._folder_path):
+        csv_content.update(DataManager.get_db())
+
+    DataManager.static_write(csv_content)
 
 
 def entry_range(scope: range) -> int:

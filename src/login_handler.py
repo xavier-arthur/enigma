@@ -2,10 +2,13 @@ from random import randrange as rr
 from random import choice
 from pathlib import Path
 from os.path import exists as file_exists
+from json import loads as json_loads
+
+import pandas as pd
 
 from encrypter import JSHandler
 
-class DataBase:
+class DataManager:
 
     _chars = [
         "a", "b", "c", "d", "e",
@@ -29,14 +32,14 @@ class DataBase:
         self.info = {provider: [username, self.pwrd]}
 
     def generate(self) -> str:
-        pwrd = DataBase._chars[rr(27)] #sets the first ch to an alphabetic letter
+        pwrd = DataManager._chars[rr(27)] #sets the first ch to an alphabetic letter
 
         while len(pwrd) != 14: # passwd length here
             try:
                 if rr(3) < 2:
-                    pwrd += choice(DataBase._chars)
+                    pwrd += choice(DataManager._chars)
                 else:
-                    pwrd += choice(DataBase._chars).upper()
+                    pwrd += choice(DataManager._chars).upper()
             except AttributeError:
                 continue
 
@@ -62,9 +65,13 @@ class DataBase:
 
 
     def write_to_file(self) -> list:
+        """
+        encrypts a DataManager object, writes to file and
+        returns a list containing it's data
+        """
 
-        if file_exists(DataBase._folder_path):
-            file_content = JSHandler.decrypt(DataBase._folder_path)
+        if file_exists(DataManager._folder_path):
+            file_content = JSHandler.decrypt(DataManager._folder_path)
 
             i = 2
             original = self.provider
@@ -80,11 +87,20 @@ class DataBase:
         file_content.update(self.info)
         file_content_enc = JSHandler.encrypt(file_content)
 
-        with open(DataBase._folder_path, "wb") as data:
+        with open(DataManager._folder_path, "wb") as data:
             data.write(file_content_enc)
 
         return list(self.info[self.provider])
 
+    @staticmethod
+    def static_write(content: dict):
+        """
+        encrypts and writes a dict to disk
+        """
+
+        content = JSHandler.encrypt(content)
+        with open(DataManager._folder_path, "wb") as out:
+            out.write(content)
 
     @staticmethod
     def get_db() -> dict:
@@ -93,16 +109,34 @@ class DataBase:
         decrypts and returns a dict with everything
         """
 
-        if file_exists(DataBase._folder_path):
-            return JSHandler.decrypt(DataBase._folder_path)
+        if file_exists(DataManager._folder_path):
+            return JSHandler.decrypt(DataManager._folder_path)
 
 
     @staticmethod
     def remove_from_db(to_remove: "key"):
+        """
+        removes an entry of the dictionary by key
+        """
 
-        #TODO   repetitive code
-        data = DataBase.get_db()
+        data = DataManager.get_db()
         del data[to_remove]
-        file_content_enc = JSHandler.encrypt(data)
-        with open(DataBase._folder_path, "wb") as data:
-            data.write(file_content_enc)
+        DataManager.static_write(data)
+
+    @staticmethod
+    def import_csv(load: "str filepath"):
+        df = pd.read_csv(load)
+        data =df.to_json()
+        data = json_loads(data)
+
+        enigma_compat = {}
+
+        for name, username, password in zip(
+                data["name"].values(),
+                data["username"].values(),
+                data["password"].values()
+            ):
+
+            enigma_compat.update({ name: [username, password] })
+
+        return enigma_compat

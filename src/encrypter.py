@@ -3,7 +3,8 @@ from os.path import exists as file_exists
 from getpass import getpass
 from pathlib import Path
 from sys import exit as sys_exit
-import json
+from json import loads as json_loads
+from json import dumps as json_dumps
 
 from cryptography.fernet import Fernet
 import bcrypt
@@ -52,8 +53,11 @@ class JSHandler:
 
     @staticmethod
     def encrypt(data: dict):
+        """
+        encrypts a json dict and returns it
+        """
 
-        data_byte = json.dumps(data).encode()
+        data_byte = json_dumps(data).encode()
         data_enc = JSHandler.cipher.encrypt(data_byte)
 
         return data_enc
@@ -61,10 +65,13 @@ class JSHandler:
 
     @staticmethod
     def decrypt(data: "file path") -> dict:
+        """
+        decrypts a json dict and returns it
+        """
         with open(data, "rb")as file_dec:
             data_dec = file_dec.read()
 
         data = JSHandler.cipher.decrypt(data_dec).decode()
-        data = json.loads(data)
+        data = json_loads(data)
 
         return data
