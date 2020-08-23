@@ -22,7 +22,7 @@ class DataManager:
         "@", "?", ".", "!", "&"
     ]
 
-    _folder_path = f"{Path.home()}/.config/enigma/data.enc"
+    folder_path = f"{Path.home()}/.config/enigma/data.enc"
 
     def __init__(self, username, provider):
 
@@ -70,8 +70,8 @@ class DataManager:
         returns a list containing it's data
         """
 
-        if file_exists(DataManager._folder_path):
-            file_content = JSHandler.decrypt(DataManager._folder_path)
+        if file_exists(DataManager.folder_path):
+            file_content = JSHandler.decrypt(DataManager.folder_path)
 
             i = 2
             original = self.provider
@@ -87,7 +87,7 @@ class DataManager:
         file_content.update(self.info)
         file_content_enc = JSHandler.encrypt(file_content)
 
-        with open(DataManager._folder_path, "wb") as data:
+        with open(DataManager.folder_path, "wb") as data:
             data.write(file_content_enc)
 
         return list(self.info[self.provider])
@@ -99,7 +99,7 @@ class DataManager:
         """
 
         content = JSHandler.encrypt(content)
-        with open(DataManager._folder_path, "wb") as out:
+        with open(DataManager.folder_path, "wb") as out:
             out.write(content)
 
     @staticmethod
@@ -109,8 +109,8 @@ class DataManager:
         decrypts and returns a dict with everything
         """
 
-        if file_exists(DataManager._folder_path):
-            return JSHandler.decrypt(DataManager._folder_path)
+        if file_exists(DataManager.folder_path):
+            return JSHandler.decrypt(DataManager.folder_path)
 
 
     @staticmethod
@@ -140,3 +140,15 @@ class DataManager:
             enigma_compat.update({ name: [username, password] })
 
         return enigma_compat
+
+    @staticmethod
+    def change_password(provider: str, new_password: str):
+        enigma_data = DataManager.get_db()
+        enigma_data[provider][1] = new_password
+        DataManager.static_write(enigma_data)
+
+    @staticmethod
+    def change_provider_name(provider:str, new_name: str):
+        enigma_data = DataManager.get_db()
+        enigma_data[new_name] = enigma_data.pop(provider)
+        DataManager.static_write(enigma_data)
