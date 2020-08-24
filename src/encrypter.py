@@ -20,13 +20,9 @@ class Password:
         # whenever the password changes this function makes sure that it user
         # information will be saved accordingly
 
-        #FIXME i don't know why but this shit ain't working
-
-        print("yoyo")
         new_pass = Password.configure()
 
         if not file_exists(f"{Password.config_folder}/data.enc"):
-            print("yo")
             sys_exit(0)
 
         try:
@@ -45,9 +41,6 @@ class Password:
         if not file_exists(f"{Password.config_folder}"):
             mkdir(Password.config_folder)
 
-        if file_exists(f"{Password.config_folder}/.enigma"):
-            if not Password.check_against(getpass("old password:").encode()):
-                sys_exit(55)
 
 
         passw = getpass("new password:")

@@ -49,25 +49,27 @@ def get_args():
 
     parsed = args.parse_args()
 
-    if parsed.manual_password:
-        parsed.manual_password = getpass("new password for {}:"
-                                         .format(parsed.data[0]))
-    if parsed.configure:
-        Password.rehash(DataManager.get_db())
 
-        sys_exit(0)
 
     if file_exists(f"{Password.config_folder}/.enigma"):
         pwtry = getpass("password:")
-        if not Password.check_against(pwtry.encode()):
-            print("invalid")
-            sys_exit(2)
-        else:
+        if Password.check_against(pwtry.encode()):
             JSHandler.passw = pwtry
             JSHandler._key = JSHandler.newk(pwtry, JSHandler.get_salt())
+        else:
+            print("invalid")
+            sys_exit(2)
     else:
         print("configuration file not found, did you mean to --configure?")
         sys_exit(1)
+
+    if parsed.manual_password:
+        parsed.manual_password = getpass("new password for {}:"
+                                         .format(parsed.data[0]))
+
+    if parsed.configure:
+        Password.rehash(DataManager.get_db())
+        sys_exit(0)
 
     if parsed.change_password:
         DataManager.change_password(
