@@ -20,11 +20,21 @@ class Password:
         # whenever the password changes this function makes sure that it user
         # information will be saved accordingly
 
+        #FIXME i don't know why but this shit ain't working
+
+        print("yoyo")
         new_pass = Password.configure()
 
+        if not file_exists(f"{Password.config_folder}/data.enc"):
+            print("yo")
+            sys_exit(0)
+
         try:
-            with open(f"{Password.config_folder}/data.enc", "wb") as out:
-                out.write(JSHandler.encrypt(data, newpass=new_pass))
+            # without this checking this section makes it impossible to store a
+            # new password hash
+                with open(f"{Password.config_folder}/data.enc", "wb") as out:
+                    out.write(JSHandler.encrypt(data, newpass=new_pass))
+                    # encrypting with new password hash
         except:
             print_exc()
 
@@ -34,6 +44,11 @@ class Password:
 
         if not file_exists(f"{Password.config_folder}"):
             mkdir(Password.config_folder)
+
+        if file_exists(f"{Password.config_folder}/.enigma"):
+            if not Password.check_against(getpass("old password:").encode()):
+                sys_exit(55)
+
 
         passw = getpass("new password:")
         passw2 = getpass("confirm new password:")
@@ -63,7 +78,6 @@ class JSHandler:
 
     # Coding this made me question my existence
 
-    @staticmethod
     def get_salt():
 
         if file_exists(f"{Password.config_folder}/.enigma-s"):
@@ -76,7 +90,6 @@ class JSHandler:
         return _salt
 
 
-    @staticmethod
     def newk(passw, salt):
         kdf = bcrypt.kdf(
             passw.encode(),
@@ -94,7 +107,7 @@ class JSHandler:
 
         if newpass:
             JSHandler.passw = newpass
-            JSHandler._key = JSHandler.new_key()
+            JSHandler._key = JSHandler.newk(newpass, JSHandler.get_salt())
 
         cipher = Fernet(JSHandler._key)
 
@@ -114,12 +127,11 @@ class JSHandler:
 
         data = cipher.decrypt(data_dec)
 
-
         data = json_loads(data)
 
         return data
 
-    passw = None
+    #passw = None
     # this variable is just here for documentation
     # when this class is called it uses _newk_ and _get_salt_
     # to recriate the original Fernet key created to store data

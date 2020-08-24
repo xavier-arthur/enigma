@@ -6,6 +6,7 @@ from getpass import getpass
 from sys import exit as sys_exit
 import argparse as ap
 import re
+from traceback import print_exc
 
 from pyperclip import copy
 
@@ -52,7 +53,8 @@ def get_args():
         parsed.manual_password = getpass("new password for {}:"
                                          .format(parsed.data[0]))
     if parsed.configure:
-        rehashed = Password.rehash(DataManager.get_db())
+        Password.rehash(DataManager.get_db())
+
         sys_exit(0)
 
     if file_exists(f"{Password.config_folder}/.enigma"):
