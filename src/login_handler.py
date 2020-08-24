@@ -3,6 +3,7 @@ from random import choice
 from pathlib import Path
 from os.path import exists as file_exists
 from json import loads as json_loads
+from json import load as json_load
 
 import pandas as pd
 
@@ -124,9 +125,16 @@ class DataManager:
         DataManager.static_write(data)
 
     @staticmethod
+    def importjson(json_file: "json filepath"):
+        with open(json_file) as data_in:
+            json_content = json_load(data_in)
+
+        return json_content
+
+    @staticmethod
     def import_csv(load: "str filepath"):
         df = pd.read_csv(load)
-        data =df.to_json()
+        data = df.to_json()
         data = json_loads(data)
 
         enigma_compat = {}

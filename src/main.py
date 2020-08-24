@@ -9,7 +9,7 @@ import re
 
 from pyperclip import copy
 
-from encrypter import Password
+from encrypter import Password, JSHandler
 from login_handler import DataManager
 
 def get_args():
@@ -18,12 +18,14 @@ def get_args():
     args = ap.ArgumentParser(description="Command line password mananger")
 
     args.add_argument("--configure", action="store_true",
-                      help="sets up password and other tweaks")
+                      help="changes default password")
 
     args.add_argument("action", default="display", nargs="?",
-                      choices=["get", "add", "remove", "display", "importcsv"])
+                      choices=["get", "add", "remove", "display", "importcsv",
+                               "importjson"])
 
-    args.add_argument("data", type=str, nargs="*", metavar="PROVIDER USERNAME",
+    args.add_argument("data", type=str, nargs="*", metavar="PROVIDER"
+                      + " USERNAME / csv/json FILEPATH",
                       help="info that will be feeded to selected action"
                       + " and username")
 
@@ -50,15 +52,20 @@ def get_args():
         parsed.manual_password = getpass("new password for {}:"
                                          .format(parsed.data[0]))
     if parsed.configure:
-        Password.configure()
+        rehashed = Password.rehash(DataManager.get_db())
         sys_exit(0)
 
-    if not file_exists(f"{Password.config_folder}/.enigma"):
-        print("config file doesn't exist did you mean to --configure?")
+    if file_exists(f"{Password.config_folder}/.enigma"):
+        pwtry = getpass("password:")
+        if not Password.check_against(pwtry.encode()):
+            print("invalid")
+            sys_exit(2)
+        else:
+            JSHandler.passw = pwtry
+            JSHandler._key = JSHandler.newk(pwtry, JSHandler.get_salt())
+    else:
+        print("configuration file not found, did you mean to --configure?")
         sys_exit(1)
-    elif not Password.check_against(getpass("enter your password:")):
-        print("invalid")
-        sys_exit(2)
 
     if parsed.change_password:
         DataManager.change_password(
@@ -175,6 +182,15 @@ def importcsv():
         csv_content.update(DataManager.get_db())
 
     DataManager.static_write(csv_content)
+
+def importjson():
+
+    json_content = DataManager.importjson(ARGS.data[0])
+
+    if file_exists(DataManager.folder_path):
+        json_content.update(DataManager.get_db())
+
+    DataManager.static_write(json_content)
 
 
 def _entry_range(scope: range) -> int:
