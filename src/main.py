@@ -2,16 +2,16 @@
 """ main method and some auxiliars functions"""
 
 from os.path import exists as file_exists
-from getpass import getpass
+from json import dump as json_dumps
 from sys import exit as sys_exit
+from getpass import getpass
 import argparse as ap
 import re
-from traceback import print_exc
 
 from pyperclip import copy
 
-from encrypter import Password, JSHandler
 from login_handler import DataManager
+from encrypter import Password, JSHandler
 
 def get_args():
     """ returns parsed args """
@@ -23,7 +23,7 @@ def get_args():
 
     args.add_argument("action", default="display", nargs="?",
                       choices=["get", "add", "remove", "display", "importcsv",
-                               "importjson"])
+                               "importjson", "export"])
 
     args.add_argument("data", type=str, nargs="*", metavar="PROVIDER"
                       + " USERNAME / csv/json FILEPATH",
@@ -45,17 +45,15 @@ def get_args():
 
     args.add_argument("-cp", "--change-password", action="store", type=str,
                       help="chances the password of given service provider",
-                      nargs=2, metavar=("OLD", "NEW"))
+                      nargs=1, metavar="PROVIDER")
 
     parsed = args.parse_args()
-
-
 
     if file_exists(f"{Password.config_folder}/.enigma"):
         pwtry = getpass("password:")
         if Password.check_against(pwtry.encode()):
             JSHandler.passw = pwtry
-            JSHandler._key = JSHandler.newk(pwtry, JSHandler.get_salt())
+            JSHandler._key = JSHandler.newk(pwtry)
         else:
             print("invalid")
             sys_exit(2)
@@ -68,13 +66,13 @@ def get_args():
                                          .format(parsed.data[0]))
 
     if parsed.configure:
-        Password.rehash(DataManager.get_db())
+        JSHandler.rehash(DataManager.get_db())
         sys_exit(0)
 
     if parsed.change_password:
         DataManager.change_password(
             parsed.change_password[0],
-            parsed.change_password[1]
+            getpass("new password for {}:".format(parsed.change_password[0]))
             )
         sys_exit(0)
     elif parsed.rename:
@@ -113,15 +111,23 @@ def main():
 def remove():
     """ deletes give login,provider,passowrd from DB """
 
-    try:
-        if not ARGS.auto_confirm:
-            dict_key = get()
-            if input(f"delete user {dict_key[0]} at {ARGS.data[0]}? [y/*] ") != "y":
-                sys_exit(55)
+    for i, obj in enumerate(ARGS.data):
+        try:
+            if not ARGS.auto_confirm:
+                dict_key = get()
+                if input(f"delete user {dict_key[0]} at {ARGS.data[0]}? [y/*] ") != "y":
+                    continue
 
-        DataManager.remove_from_db(ARGS.data[0])
-    except KeyError:
-        print(f"provider {ARGS.data[0]} not found")
+            DataManager.remove_from_db(obj)
+            ARGS.data[0] = ARGS.data[i + 1]
+            # └-> this  is done in order to loop through all arguments that were
+            # feed to DATA at the very end it will raise an IndexError which is
+            # expected and can be ignored
+        except KeyError:
+            print(f"provider {ARGS.data[0]} not found")
+            continue
+        except IndexError:
+            pass
 
 
 def get() -> list:
@@ -131,13 +137,18 @@ def get() -> list:
 
     matches = re.findall(f"{ARGS.data[0]}-?[0-9]?", str(data_dict.keys()))
 
+
+    # this uses a regex matcher to get providers with similar name of the given
+    # one and only runs if there are multiple matches
     if len(matches) > 1:
         print(f"{len(matches)} entries found\n")
         for i, obj in enumerate(matches):
             print(f"{i + 1} -> {obj} at " + "{}".format(data_dict[obj][0]))
 
         entry = _entry_range(range(len(matches)))
-        return list(data_dict[matches][entry])
+        return list(data_dict[matches[entry]])
+        # because of "enumerate" i and obj variables continue to be available
+        # even when out of the for loop's scope
 
     try:
         return list(data_dict[ARGS.data[0]])
@@ -150,6 +161,7 @@ def add() -> list:
     """ adds a new user with given password to DB """
 
     new_password = DataManager(ARGS.data[1], ARGS.data[0])
+
     if ARGS.manual_password:
         new_password.pwrd = ARGS.manual_password
 
@@ -168,12 +180,12 @@ def display():
     """
 
     data = DataManager.get_db()
-    mkey = max(map(len, (map(str, data.keys()))))
+    spaces = max(map(len, (map(str, data.keys()))))
     # converts all data.keys to str then gets the higher length off them all
     # which will further be used as number of spaces to format the list output
 
     for i in data.keys():
-        print("{:<{}} @ {:>}".format(str(i), mkey, str(data[i][0])))
+        print("{:<{}} @ {:>}".format(str(i), spaces, str(data[i][0])))
 
 def importcsv():
     """
@@ -196,6 +208,13 @@ def importjson():
 
     DataManager.static_write(json_content)
 
+
+def export():
+
+    decrypted_content = DataManager.get_db()
+
+    with open(f"{ARGS.data[0]}/enigma_passwords.json", "w") as out:
+        json_dumps(decrypted_content, out)
 
 def _entry_range(scope: range) -> int:
     """ checks if given range is inside the expected scope """
