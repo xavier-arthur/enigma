@@ -106,7 +106,7 @@ class JSHandler:
             passw.encode(),
             salt,
             32, # number of key bytes
-            100
+            100 # number of rounds, the higher the better (and slower)
         )
         key = key = base64.urlsafe_b64encode(kdf)
 

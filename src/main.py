@@ -10,7 +10,7 @@ import re
 
 from pyperclip import copy
 
-from login_handler import DataManager
+from password_handler import DataManager
 from encrypter import Password, JSHandler
 
 def get_args():
@@ -234,4 +234,8 @@ def _entry_range(scope: range) -> int:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print()
+    # Silences the exception output when user sends a SIGINT, typically through ^C
