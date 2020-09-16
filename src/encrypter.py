@@ -144,7 +144,7 @@ class JSHandler:
 
         return data
 
-    # i used staticmehods cause i wrote the entire program without giving the
+    # i used staticmehods because i wrote the entire program without giving the
     # due attention to this cryptography part and when i had it done didn't want
     # to change all of its logic
     # when this class is called it uses _newk and _get_salt

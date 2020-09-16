@@ -140,16 +140,13 @@ def get() -> list:
 
     # this uses a regex matcher to get providers with similar name of the given
     # one and only runs if there are multiple matches
-    if len(matches) > 1:
+    if len(matches) > 1 and not ARGS.action == "remove":
         print(f"{len(matches)} entries found\n")
         for i, obj in enumerate(matches):
             print(f"{i + 1} -> {obj} at " + "{}".format(data_dict[obj][0]))
 
         entry = _entry_range(range(len(matches)))
         return list(data_dict[matches[entry]])
-        # because of "enumerate" i and obj variables continue to be available
-        # even when out of the for loop's scope
-
     try:
         return list(data_dict[ARGS.data[0]])
     except KeyError:

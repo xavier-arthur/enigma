@@ -40,11 +40,8 @@ class DataManager:
         returns a list containing it's data
         """
 
-        try :
+        if file_exists(DataManager.folder_path):
             file_content = JSHandler.decrypt(DataManager.folder_path)
-        except FileNotFoundError:
-            print_exc()
-            print("panic, could not find configuration file")
 
             i = 2
             original = self.provider
@@ -53,11 +50,11 @@ class DataManager:
                 i += 1
 
             self.info = {self.provider: [self.username, self.pwrd]}
-
         else:
             file_content = {}
 
         file_content.update(self.info)
+        file_content = dict(sorted(file_content.items()))
         file_content_enc = JSHandler.encrypt(file_content)
 
         with open(DataManager.folder_path, "wb") as data:
@@ -66,11 +63,11 @@ class DataManager:
         return list(self.info[self.provider])
 
 
-    @staticmethod
-    def __check(pwrd) -> str:
+    @classmethod
+    def __check(cls, pwrd) -> str:
 
         sym_count = 0
-        syms = ("$", "^", "*", "%", "@", "?", ".", "!", "&")
+        syms = cls._chars[36:]
         pwrd = list(pwrd)
 
 
@@ -108,6 +105,7 @@ class DataManager:
         """
 
         content = JSHandler.encrypt(content)
+
         with open(DataManager.folder_path, "wb") as out:
             out.write(content)
 
