@@ -12,6 +12,7 @@ from pyperclip import copy
 
 from password_handler import DataManager
 from encrypter import Password, JSHandler
+from encrypter import CONFIG_FOLDER
 
 def get_args():
     """ returns parsed args """
@@ -49,7 +50,7 @@ def get_args():
 
     parsed = args.parse_args()
 
-    if file_exists(f"{Password.config_folder}/.enigma"):
+    if file_exists(f"{CONFIG_FOLDER}/.enigma"):
         pwtry = getpass("password:")
         if Password.check_against(pwtry.encode()):
             JSHandler.passw = pwtry
@@ -57,7 +58,7 @@ def get_args():
         else:
             print("invalid")
             sys_exit(2)
-    else:
+    elif not parsed.configure:
         print("configuration file not found, did you mean to --configure?")
         sys_exit(1)
 

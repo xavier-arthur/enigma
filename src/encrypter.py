@@ -10,20 +10,20 @@ import base64
 from cryptography.fernet import Fernet
 import bcrypt
 
+CONFIG_FOLDER = f"{Path.home()}/.config/enigma"
+
 class Password:
     """
     methods belonging to the master password, not to be confused with the latter
     class
     """
 
-    config_folder = f"{Path.home()}/.config/enigma"
-
     @staticmethod
     def configure():
         """ creates a config file with the given password lock """
 
-        if not file_exists(f"{Password.config_folder}"):
-            mkdir(Password.config_folder)
+        if not file_exists(f"{CONFIG_FOLDER}"):
+            mkdir(CONFIG_FOLDER)
 
         passw = getpass("new password:")
         passw2 = getpass("confirm new password:")
@@ -32,7 +32,7 @@ class Password:
             print("passwords don't match,try again")
             sys_exit(1)
 
-        with open(f"{Password.config_folder}/.enigma", "wb") as hsh:
+        with open(f"{CONFIG_FOLDER}/.enigma", "wb") as hsh:
             hsh.write(bcrypt.hashpw(f"{passw}".encode(), bcrypt.gensalt()))
 
         return passw
@@ -42,7 +42,7 @@ class Password:
     def check_against(trial: bytes) -> bool:
         """ compare password hashes """
 
-        with open(f"{Password.config_folder}/.enigma", "rb") as hsh:
+        with open(f"{CONFIG_FOLDER}/.enigma", "rb") as hsh:
             key = hsh.read()
 
             if bcrypt.checkpw(trial, key):
@@ -57,8 +57,8 @@ class JSHandler:
     JSON dict
     """
 
-    @staticmethod
-    def rehash(data):
+    @classmethod
+    def rehash(cls, data):
         """
         whenever the password changes this function makes sure that it user
         information will be saved accordingly, however it has to be called
@@ -68,13 +68,13 @@ class JSHandler:
 
         new_pass = Password.configure()
 
-        if not file_exists(f"{Password.config_folder}/data.enc"):
+        if not file_exists(f"{CONFIG_FOLDER}/data.enc"):
             sys_exit(0)
 
         # without this checking this section makes it impossible to store a
         # new password hash
-        with open(f"{Password.config_folder}/data.enc", "wb") as out:
-            out.write(JSHandler.encrypt(data, newpass=new_pass))
+        with open(f"{CONFIG_FOLDER}/data.enc", "wb") as out:
+            out.write(cls.encrypt(data, newpass=new_pass))
             # encrypting with new password hash
 
     # Coding this made me question my existence
@@ -85,43 +85,43 @@ class JSHandler:
         gets salt if saved otherwise creates a new one and writes it
         """
 
-        if file_exists(f"{Password.config_folder}/.enigma-s"):
-            with open(f"{Password.config_folder}/.enigma-s", "rb") as data_in:
+        if file_exists(f"{CONFIG_FOLDER}/.enigma-s"):
+            with open(f"{CONFIG_FOLDER}/.enigma-s", "rb") as data_in:
                 _salt = data_in.read()
         else:
             _salt = bcrypt.gensalt()
-            with open(f"{Password.config_folder}/.enigma-s", "wb") as out:
+            with open(f"{CONFIG_FOLDER}/.enigma-s", "wb") as out:
                 out.write(_salt)
 
         return _salt
 
 
-    @staticmethod
-    def newk(passw: bytes) -> "key":
+    @classmethod
+    def newk(cls, passw: bytes) -> "key":
         """ this generates a key based on user's password """
         # kdf stands for Key Derivation Function
 
-        salt = JSHandler.get_salt()
+        salt = cls.get_salt()
         kdf = bcrypt.kdf(
             passw.encode(),
             salt,
             32, # number of key bytes
             100 # number of rounds, the higher the better (and slower)
         )
-        key = key = base64.urlsafe_b64encode(kdf)
+        key = base64.urlsafe_b64encode(kdf)
 
         return key
 
 
-    @staticmethod
-    def encrypt(data: dict, newpass=None) -> bytes:
+    @classmethod
+    def encrypt(cls, data: dict, newpass=None) -> bytes:
         """ encrypts "data" parameters then returns it """
 
         if newpass:
-            JSHandler.passw = newpass
-            JSHandler._key = JSHandler.newk(newpass)
+            cls.passw = newpass
+            cls._key = cls.newk(newpass)
 
-        cipher = Fernet(JSHandler._key)
+        cipher = Fernet(cls._key)
 
         data_byte = json_dumps(data).encode()
         encrypted_data = cipher.encrypt(data_byte)
@@ -129,11 +129,11 @@ class JSHandler:
         return encrypted_data
 
 
-    @staticmethod
-    def decrypt(data: "filepath") -> dict:
+    @classmethod
+    def decrypt(cls, data: "filepath") -> dict:
         """ gets the content of data.enc and returns it as a dict """
 
-        cipher = Fernet(JSHandler._key)
+        cipher = Fernet(cls._key)
 
         with open(data, "rb") as file_dec:
             data_dec = file_dec.read()
